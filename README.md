@@ -15,7 +15,15 @@ Also having fun with AI building this, so it might not be up to standards. I wan
 
 ## 1-shot Concurrency
 
-One-off parallel processing over enumerable collections. Run once, get results, done.
+One-off parallel processing over collections. Run once, get results, done.
+
+**Works with both:**
+- `IEnumerable<T>` - Regular collections (use `FlowControl.FlowEnumerable`)
+- `IAsyncEnumerable<T>` - Async streams (use `FlowControl.FlowAsyncEnumerable`)
+
+**Key difference:**
+- `IEnumerable<T>` uses `Parallel.ForEachAsync` under the hood - best for in-memory collections
+- `IAsyncEnumerable<T>` uses channels for producer-consumer pattern - best for streaming data (database queries, HTTP responses, file reads)
 
 | Method | Purpose |
 |:--|:--|
@@ -30,6 +38,8 @@ One-off parallel processing over enumerable collections. Run once, get results, 
 Run async operations for an enumerable with a concurrency limit.
 
 ```csharp
+using FlowControl.Enumerable; // or FlowControl.AsyncEnumerable
+
 await files.ParallelAsync(async (path, ct) =>
 {
     var content = await File.ReadAllTextAsync(path, ct);
@@ -40,7 +50,9 @@ await files.ParallelAsync(async (path, ct) =>
 
 - Global cap via `maxParallel`
 - Honors cancellation
-- Aggregates exceptions via `Parallel.ForEachAsync` - if multiple operations fail, they're collected into an `AggregateException`
+- Exception behavior:
+  - `IEnumerable<T>`: Aggregates via `Parallel.ForEachAsync` → `AggregateException`
+  - `IAsyncEnumerable<T>`: Aggregates via `Task.WhenAll` → `AggregateException`
 
 ---
 
@@ -92,7 +104,105 @@ await jobs.ParallelAsyncByKey(
 
 ## Continuous Concurrency
 
-Ongoing stream processing with channels. Thinking about channel extensions to make life easier - work in progress.
+Ongoing stream processing with `Channel<T>`. Use channels for long-running pipelines, producer-consumer patterns, or when you need backpressure control.
+
+**All operations work on `Channel<T>` directly** - no need to type `.Reader` or `.Writer` every time.
+
+| Operation | Purpose |
+|:--|:--|
+| [`ReadAllAsync()`](#readallasynch---read-all-items-as-iasyncenumerable) | Read items as async stream |
+| [`ForEachAsync()`](#foreachasync---process-items-sequentially) | Process sequentially |
+| [`ParallelAsync()`](#parallelasync---process-items-in-parallel) | Process in parallel |
+| [`ParallelAsyncByKey()`](#parallelasyncbykey---per-key-concurrency-limits) | Per-key concurrency |
+| [`LinkTo()`](#linkto---pipe-items-to-another-channel) | Pipe to another channel |
+| [`WriteAllAsync()`](#writeallasync---write-all-items-from-a-source) | Write from source |
+
+---
+
+## Channel Extensions
+
+### Reading Operations
+
+**ReadAllAsync() - Read all items as IAsyncEnumerable**
+```csharp
+using FlowControl.Channel;
+
+var channel = Channel.CreateUnbounded<int>();
+
+// Read all items from channel as async stream
+await foreach (var item in channel.ReadAllAsync())
+{
+    Console.WriteLine(item);
+}
+```
+
+**ForEachAsync() - Process items sequentially**
+```csharp
+// Process each item one at a time (sequential)
+await channel.ForEachAsync(async (item, ct) =>
+{
+    // Items processed in order, one after another
+    await ProcessAsync(item, ct);
+});
+```
+
+**ParallelAsync() - Process items in parallel**
+```csharp
+// Process multiple items concurrently with a global cap
+await channel.ParallelAsync(async (item, ct) =>
+{
+    // Up to 8 items being processed at the same time
+    await ProcessAsync(item, ct);
+}, maxParallel: 8);
+```
+
+**ParallelAsyncByKey() - Per-key concurrency limits**
+```csharp
+// Limit concurrency globally AND per key (e.g., per account, user, or host)
+await channel.ParallelAsyncByKey(
+    keySelector: item => item.AccountId,
+    handler: async (item, ct) =>
+    {
+        // Global limit: max 64 items processing at once
+        // Per-key limit: max 2 items per account at once
+        await ProcessAsync(item, ct);
+    },
+    maxParallel: 64,
+    maxPerKey: 2);
+```
+
+**LinkTo() - Pipe items to another channel**
+```csharp
+var sourceChannel = Channel.CreateUnbounded<int>();
+var targetChannel = Channel.CreateUnbounded<int>();
+
+// Pipe all items to target channel
+await sourceChannel.LinkTo(targetChannel.Writer);
+// Target channel is automatically completed when source is done
+
+// Or with filtering
+await sourceChannel.LinkTo(
+    targetChannel.Writer,
+    filter: x => x > 10  // Only items > 10 are forwarded
+);
+// Target is still auto-completed after filtered items
+```
+
+### Writing Operations
+
+**WriteAllAsync() - Write all items from a source**
+```csharp
+var channel = Channel.CreateUnbounded<int>();
+
+// From IEnumerable<T>
+await channel.WriteAllAsync(Enumerable.Range(1, 100));
+
+// From IAsyncEnumerable<T>
+await channel.WriteAllAsync(FetchDataAsync());
+
+// Note: You must manually complete the channel when done writing
+channel.Writer.Complete();
+```
 
 ---
 
