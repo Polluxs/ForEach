@@ -2,72 +2,16 @@
 
 Extension methods that add parallel `ForEach` iterations to `IEnumerable<T>`, `IAsyncEnumerable<T>`, and `Channel<T>`.
 
-Works on lists, arrays, collections, async streams, channels - anything that implements these interfaces.
-
-.NET 8 only, use at own risk, it's not battle tested code.
-
-**Quick examples:**
-
 ```csharp
 using ForEach.Enumerable;
 
-// Simple parallel processing - works on arrays, lists, any IEnumerable<T>
-string[] files = Directory.GetFiles("/data");
 await files.ForEachParallelAsync(async (file, ct) =>
-{
-    var content = await File.ReadAllTextAsync(file, ct);
-    await ProcessAsync(content, ct);
-}, maxParallel: 10);
-
-// Parallel processing with results
-string[] urls = ["https://api1.com", "https://api2.com", "https://api3.com"];
-var results = await urls.ForEachParallelAsync(async (url, ct) =>
-{
-    var response = await httpClient.GetAsync(url, ct);
-    return (url, response.StatusCode);
-}, maxParallel: 5);
-
-foreach (var (url, status) in results)
-    Console.WriteLine($"{url}: {status}");
-
-// Limit by key - max 100 total requests, max 2 per host
-var requests = new[]
-{
-    new Request("https://api1.com/users"),
-    new Request("https://api1.com/posts"),
-    new Request("https://api2.com/data"),
-    // ... hundreds more
-};
-
-await requests.ForEachParallelByKeyAsync(
-    keySelector: req => req.Host,
-    body: async (req, ct) =>
-    {
-        var response = await httpClient.GetAsync(req.Url, ct);
-        Console.WriteLine($"{req.Url}: {response.StatusCode}");
-    },
-    maxTotalParallel: 100,
-    maxPerKey: 2);
-
-// Works on IEnumerable<T>, IAsyncEnumerable<T>, and Channel<T>
+    await ProcessAsync(file, ct), maxParallel: 10);
 ```
 
-## ForEach Methods
+## Methods
 
-The main parallel processing methods work on Enumerables, IAsync, and Channels:
-
-### `IEnumerable<T>` (`using ForEach.Enumerable;`)
-Works on: `List<T>`, `T[]` (arrays), `HashSet<T>`, `Dictionary<K,V>`, LINQ queries, or anything implementing `IEnumerable<T>`
-
-### `IAsyncEnumerable<T>` (`using ForEach.AsyncEnumerable;`)
-Works on: async LINQ, `await foreach` sources, database queries (EF Core), HTTP response streams, file I/O
-
-### `Channel<T>` (`using ForEach.Channel;`)
-Works on: `Channel<T>` for long-running pipelines, producer-consumer patterns, backpressure control
-
----
-
-**All three types support these methods:**
+**For `IEnumerable<T>`, `IAsyncEnumerable<T>`, and `Channel<T>`:**
 
 | Method | Purpose |
 |:--|:--|
@@ -75,29 +19,19 @@ Works on: `Channel<T>` for long-running pipelines, producer-consumer patterns, b
 | [`ForEachParallelAsync<T,TResult>`](#foreachparallelasyncttresult) | Process items concurrently and collect results |
 | [`ForEachParallelByKeyAsync`](#foreachparallelbykeysync) | Process items with both global and per-key concurrency limits |
 
-**`Channel<T>` also supports:**
+**For `Channel<T>` only:**
 
 | Method | Purpose |
 |:--|:--|
-| [`channel.ForEachAsync()`](#foreachasync---process-items-sequentially) | Process items sequentially (one at a time) |
-
----
-
-## Additional Methods
-
-### For `Channel<T>` only (`using ForEach.Channel;`)
-
-These helper methods work directly on `Channel<T>` - no need to type `.Reader` or `.Writer`:
-
-| Method | Purpose |
-|:--|:--|
-| [`channel.ReadAllAsync()`](#readallasync---read-items-as-async-stream) | Convert channel to `IAsyncEnumerable<T>` |
-| [`channel.WriteAllAsync(source)`](#writeallasync---write-all-items-from-a-source) | Write all items from `IEnumerable<T>` or `IAsyncEnumerable<T>` into channel |
+| [`ForEachAsync`](#foreachasync) | Process items sequentially |
+| [`ReadAllAsync`](#readallasync) | Convert channel to `IAsyncEnumerable<T>` |
+| [`WriteAllAsync`](#writeallasync) | Write items from `IEnumerable<T>` or `IAsyncEnumerable<T>` into channel |
 
 
 ---
-## In-depth: ForEach Methods
-### `ForEachParallelAsync`
+## Examples
+
+### ForEachParallelAsync
 
 Run async operations for an enumerable with a concurrency limit.
 
@@ -119,9 +53,9 @@ await files.ForEachParallelAsync(async (path, ct) =>
   - `IAsyncEnumerable<T>`: Aggregates via `Task.WhenAll` → `AggregateException`
 
 
-### `ForEachParallelAsync<T,TResult>`
+### ForEachParallelAsync (with results)
 
-Same, but returns results.
+Process items concurrently and collect results.
 
 ```csharp
 var results = await urls.ForEachParallelAsync(async (url, ct) =>
