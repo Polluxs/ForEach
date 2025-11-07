@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
-using ForEach.FlowEnumerable;
 using FluentAssertions;
+using ForEach.FeEnumerable;
 
-namespace Foreach.Test.FlowEnumerable;
+namespace Foreach.Test.Enumerable;
 
-public class ParallelExtensionsTests
+public class AsyncEnumerableExtensionsTests
 {
     [Fact]
     public async Task ForEachParallelAsync_ProcessesAllItems_AndHonorsMaxParallel()

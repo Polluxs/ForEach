@@ -1,16 +1,15 @@
 using System.Collections.Concurrent;
-using System.Threading.Channels;
-using ForEach.FlowChannel;
 using FluentAssertions;
+using ForEach.Channel;
 
-namespace Foreach.Test.FlowChannel;
+namespace Foreach.Test.Channel;
 
-public class ChannelExtensionsTest
+public class ChannelsExtensionsTest
 {
     [Fact]
     public async Task ReadAllAsync_ReadsAllItemsFromChannel()
     {
-        var channel = Channel.CreateUnbounded<int>();
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<int>();
 
         // Write items
         await channel.Writer.WriteAsync(1);
@@ -31,7 +30,7 @@ public class ChannelExtensionsTest
     [Fact]
     public async Task ForEachAsync_ProcessesItemsSequentially()
     {
-        var channel = Channel.CreateUnbounded<int>();
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<int>();
         var processed = new List<int>();
         var currentlyProcessing = 0;
 
@@ -60,7 +59,7 @@ public class ChannelExtensionsTest
     [Fact]
     public async Task ForEachParallelAsync_ProcessesItemsInParallel()
     {
-        var channel = Channel.CreateUnbounded<int>();
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<int>();
         var current = 0;
         var maxObserved = 0;
         var processed = 0;
@@ -88,7 +87,7 @@ public class ChannelExtensionsTest
     [Fact]
     public async Task ForEachParallelByKeyAsync_RespectsPerKeyLimit()
     {
-        var channel = Channel.CreateUnbounded<(char Key, int Value)>();
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<(char Key, int Value)>();
 
         // Write 60 items across 3 keys (A, B, C)
         for (int i = 0; i < 60; i++)
@@ -132,8 +131,8 @@ public class ChannelExtensionsTest
     [Fact]
     public async Task WriteAllAsync_FromEnumerable_WritesAllItems()
     {
-        var channel = Channel.CreateUnbounded<int>();
-        var source = Enumerable.Range(1, 100);
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<int>();
+        var source = System.Linq.Enumerable.Range(1, 100);
 
         await channel.WriteAllAsync(source);
 
@@ -153,7 +152,7 @@ public class ChannelExtensionsTest
     [Fact]
     public async Task WriteAllAsync_FromAsyncEnumerable_WritesAllItems()
     {
-        var channel = Channel.CreateUnbounded<int>();
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<int>();
 
         async IAsyncEnumerable<int> GetItemsAsync()
         {
@@ -176,13 +175,13 @@ public class ChannelExtensionsTest
         }
 
         items.Should().HaveCount(50);
-        items.Should().BeEquivalentTo(Enumerable.Range(1, 50));
+        items.Should().BeEquivalentTo(System.Linq.Enumerable.Range(1, 50));
     }
 
     [Fact]
     public async Task WriteAllAsync_CanBeCancelled()
     {
-        var channel = Channel.CreateUnbounded<int>();
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<int>();
         var cts = new CancellationTokenSource();
         cts.CancelAfter(50);
 

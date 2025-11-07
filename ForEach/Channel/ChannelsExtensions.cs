@@ -1,9 +1,9 @@
 using System.Threading.Channels;
-using ForEach.FlowAsyncEnumerable;
+using ForEach.AsyncEnumerable;
 
-namespace ForEach.FlowChannel;
+namespace ForEach.Channel;
 
-public static class ChannelExtensions
+public static class ChannelsExtensions
 {
     /// <summary>
     /// Read all items from the channel as an async enumerable stream.

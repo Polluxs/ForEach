@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
-using ForEach.FlowAsyncEnumerable;
 using FluentAssertions;
+using ForEach.AsyncEnumerable;
 
-namespace Foreach.Test.FlowAsyncEnumerable;
+namespace Foreach.Test.AsyncEnumerable;
 
-public class ParallelExtensionsTest
+public class AsyncEnumerableExtensionsTest
 {
     private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> source)
     {
@@ -18,7 +18,7 @@ public class ParallelExtensionsTest
     [Fact]
     public async Task ForEachParallelAsync_ProcessesAllItems_AndHonorsMaxParallel()
     {
-        var items = Enumerable.Range(1, 100).ToArray();
+        var items = System.Linq.Enumerable.Range(1, 100).ToArray();
         var asyncItems = ToAsyncEnumerable(items);
         var current = 0;
         var maxObserved = 0;
@@ -41,7 +41,7 @@ public class ParallelExtensionsTest
     public async Task ForEachParallelByKeyAsync_RespectsPerKeyLimit()
     {
         // Create 60 items across 3 keys (A,B,C)
-        var items = Enumerable.Range(0, 60).Select(i => (Key: (char)('A' + (i % 3)), Value: i)).ToArray();
+        var items = System.Linq.Enumerable.Range(0, 60).Select(i => (Key: (char)('A' + (i % 3)), Value: i)).ToArray();
         var asyncItems = ToAsyncEnumerable(items);
 
         var perKeyCurrent = new ConcurrentDictionary<char, int>();
@@ -79,7 +79,7 @@ public class ParallelExtensionsTest
     [Fact]
     public async Task ForEachParallelAsync_ReturnsResults()
     {
-        var items = Enumerable.Range(1, 20).ToList();
+        var items = System.Linq.Enumerable.Range(1, 20).ToList();
         var asyncItems = ToAsyncEnumerable(items);
 
         var results = await asyncItems.ForEachParallelAsync(async (x, ct) =>
@@ -98,7 +98,7 @@ public class ParallelExtensionsTest
         var cts = new CancellationTokenSource();
         cts.CancelAfter(50);
 
-        var items = Enumerable.Range(0, 1000);
+        var items = System.Linq.Enumerable.Range(0, 1000);
         var asyncItems = ToAsyncEnumerable(items);
 
         Func<Task> act = async () =>
@@ -115,7 +115,7 @@ public class ParallelExtensionsTest
     [Fact]
     public async Task ForEachParallelAsync_AggregatesExceptions()
     {
-        var items = Enumerable.Range(1, 20);
+        var items = System.Linq.Enumerable.Range(1, 20);
         var asyncItems = ToAsyncEnumerable(items);
 
         Func<Task> act = async () =>
