@@ -34,14 +34,24 @@ when you need backpressure control.
 
 **All operations work on `Channel<T>` directly** - no need to type `.Reader` or `.Writer` every time.
 
-| Operation | Purpose |
-|:--|:--|
-| [`ToAsyncEnumerable()`](#toasyncenumerable---convert-channel-to-async-stream) | Simplify reading |
-| [`ForEachAsync()`](#foreachasync---process-items-sequentially) | Process sequentially |
-| [`ParallelAsync()`](#parallelasync---process-items-in-parallel) | Process concurrently |
-| [`ParallelByKeyAsync()`](#parallelasyncbykey---per-key-concurrency-limits) | Limit per key |
-| [`LinkTo()`](#linkto---pipe-items-to-another-channel) | Forward items |
-| [`WriteAllAsync()`](#writeallasync---write-all-items-from-a-source) | Fill from source |
+**Basic Operations:**
+
+| Operation                                                                                          | Purpose                                                                           |
+|:---------------------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
+| [`channel.WriteAllAsync()`](#writeallasync---write-all-items-from-a-source)                  | Fill from source                                                                  |
+| [`channel.ReadAllAsync()`](#readallasync---read-items-as-async-stream) | Process sequentially |
+| [`channel.ForEachAsync()`](#foreachasync---process-items-sequentially)          | Process sequentially |
+
+**Concurrency Operations:**
+
+| Operation                                                                                       | Purpose |
+|:------------------------------------------------------------------------------------------------|:--|
+| [`channel.ParallelAsync()`](#parallelasync---process-items-in-parallel)            | Process concurrently |
+| [`channel.ParallelByKeyAsync()`](#parallelasyncbykey---per-key-concurrency-limits) | Limit per key |
+
+**Note:** `channel.LinkTo(otherChannel, filter)` was considered for routing items between channels,
+but would require a different channel implementation to avoid infinite read loops when items are
+written back to the source. May explore this in a future version.
 
 
 ---
@@ -116,9 +126,9 @@ await jobs.ParallelByKeyAsync(
 
 ## In-depth: Continuous Concurrency
 
-### Reading Operations
+### Basic Operations
 
-#### ToAsyncEnumerable() - Convert channel to async stream
+#### ReadAllAsync() - Read items as async stream
 ```csharp
 using FlowControl.Channel;
 
@@ -128,9 +138,25 @@ while (channel.Reader.TryRead(out var item))
     Process(item);
 
 // With: simple foreach
-await foreach (var item in channel.ToAsyncEnumerable())
+await foreach (var item in channel.ReadAllAsync())
     Process(item);
 ```
+
+#### WriteAllAsync() - Write all items from a source
+```csharp
+var channel = Channel.CreateUnbounded<int>();
+
+// From IEnumerable<T>
+await channel.WriteAllAsync(Enumerable.Range(1, 100));
+
+// From IAsyncEnumerable<T>
+await channel.WriteAllAsync(FetchDataAsync());
+
+// Note: You must manually complete the channel when done writing
+channel.Writer.Complete();
+```
+
+### Concurrency Operations
 
 #### ForEachAsync() - Process items sequentially
 ```csharp
@@ -165,39 +191,6 @@ await channel.ParallelByKeyAsync(
     },
     maxParallel: 64,
     maxPerKey: 2);
-```
-
-#### LinkTo() - Pipe items to another channel
-```csharp
-var sourceChannel = Channel.CreateUnbounded<int>();
-var targetChannel = Channel.CreateUnbounded<int>();
-
-// Pipe all items to target channel
-await sourceChannel.LinkTo(targetChannel);
-// Target channel is automatically completed when source is done
-
-// Or with filtering
-await sourceChannel.LinkTo(
-    targetChannel,
-    filter: x => x > 10  // Only items > 10 are forwarded
-);
-// Target is still auto-completed after filtered items
-```
-
-### Writing Operations
-
-#### WriteAllAsync() - Write all items from a source
-```csharp
-var channel = Channel.CreateUnbounded<int>();
-
-// From IEnumerable<T>
-await channel.WriteAllAsync(Enumerable.Range(1, 100));
-
-// From IAsyncEnumerable<T>
-await channel.WriteAllAsync(FetchDataAsync());
-
-// Note: You must manually complete the channel when done writing
-channel.Writer.Complete();
 ```
 
 ---

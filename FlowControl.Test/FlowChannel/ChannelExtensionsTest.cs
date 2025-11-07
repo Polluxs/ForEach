@@ -8,7 +8,7 @@ namespace FlowControl.Test.FlowChannel;
 public class ChannelExtensionsTest
 {
     [Fact]
-    public async Task ToAsyncEnumerable_ReadsAllItemsFromChannel()
+    public async Task ReadAllAsync_ReadsAllItemsFromChannel()
     {
         var channel = Channel.CreateUnbounded<int>();
 
@@ -20,7 +20,7 @@ public class ChannelExtensionsTest
 
         // Read all items
         var items = new List<int>();
-        await foreach (var item in channel.ToAsyncEnumerable())
+        await foreach (var item in channel.ReadAllAsync())
         {
             items.Add(item);
         }
@@ -130,60 +130,6 @@ public class ChannelExtensionsTest
     }
 
     [Fact]
-    public async Task LinkTo_PipesAllItemsToTarget()
-    {
-        var source = Channel.CreateUnbounded<int>();
-        var target = Channel.CreateUnbounded<int>();
-
-        // Write to source
-        for (int i = 1; i <= 10; i++)
-        {
-            await source.Writer.WriteAsync(i);
-        }
-        source.Writer.Complete();
-
-        // Link and read
-        var linkTask = source.LinkTo(target);
-
-        var items = new List<int>();
-        await foreach (var item in target.ToAsyncEnumerable())
-        {
-            items.Add(item);
-        }
-
-        await linkTask;
-
-        items.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-    }
-
-    [Fact]
-    public async Task LinkTo_WithFilter_OnlyForwardsMatchingItems()
-    {
-        var source = Channel.CreateUnbounded<int>();
-        var target = Channel.CreateUnbounded<int>();
-
-        // Write to source
-        for (int i = 1; i <= 20; i++)
-        {
-            await source.Writer.WriteAsync(i);
-        }
-        source.Writer.Complete();
-
-        // Link with filter (only even numbers)
-        var linkTask = source.LinkTo(target, filter: x => x % 2 == 0);
-
-        var items = new List<int>();
-        await foreach (var item in target.ToAsyncEnumerable())
-        {
-            items.Add(item);
-        }
-
-        await linkTask;
-
-        items.Should().BeEquivalentTo(new[] { 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 });
-    }
-
-    [Fact]
     public async Task WriteAllAsync_FromEnumerable_WritesAllItems()
     {
         var channel = Channel.CreateUnbounded<int>();
@@ -195,7 +141,7 @@ public class ChannelExtensionsTest
         channel.Writer.Complete();
 
         var items = new List<int>();
-        await foreach (var item in channel.ToAsyncEnumerable())
+        await foreach (var item in channel.ReadAllAsync())
         {
             items.Add(item);
         }
@@ -224,7 +170,7 @@ public class ChannelExtensionsTest
         channel.Writer.Complete();
 
         var items = new List<int>();
-        await foreach (var item in channel.ToAsyncEnumerable())
+        await foreach (var item in channel.ReadAllAsync())
         {
             items.Add(item);
         }

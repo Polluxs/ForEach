@@ -6,9 +6,9 @@ namespace FlowControl.FlowChannel;
 public static class ChannelExtensions
 {
     /// <summary>
-    /// Convert the channel to an async enumerable stream.
+    /// Read all items from the channel as an async enumerable stream.
     /// </summary>
-    public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(
+    public static async IAsyncEnumerable<T> ReadAllAsync<T>(
         this Channel<T> channel,
         [System.Runtime.CompilerServices.EnumeratorCancellation]
         CancellationToken ct = default)
@@ -29,7 +29,7 @@ public static class ChannelExtensions
     {
         return Task.Run(async () =>
         {
-            await foreach (var item in channel.ToAsyncEnumerable(ct).ConfigureAwait(false))
+            await foreach (var item in channel.ReadAllAsync(ct).ConfigureAwait(false))
                 await handler(item, ct).ConfigureAwait(false);
         }, ct);
     }
@@ -43,7 +43,7 @@ public static class ChannelExtensions
         int maxParallel = 32,
         CancellationToken ct = default)
     {
-        return channel.ToAsyncEnumerable(ct).ParallelAsync(handler, maxParallel, ct);
+        return channel.ReadAllAsync(ct).ParallelAsync(handler, maxParallel, ct);
     }
 
     /// <summary>
@@ -58,26 +58,8 @@ public static class ChannelExtensions
         CancellationToken ct = default)
         where TKey : notnull
     {
-        return channel.ToAsyncEnumerable(ct)
+        return channel.ReadAllAsync(ct)
             .ParallelByKeyAsync(keySelector, handler, maxParallel, maxPerKey, ct);
-    }
-
-    /// <summary>
-    /// Pipe all items from this channel to a target channel, optionally filtering items.
-    /// The target channel is automatically completed when all items are processed.
-    /// </summary>
-    public static async Task LinkTo<T>(
-        this Channel<T> channel,
-        Channel<T> target,
-        Func<T, bool>? filter = null,
-        CancellationToken ct = default)
-    {
-        var writer = target.Writer;
-        await foreach (var item in channel.ToAsyncEnumerable(ct).ConfigureAwait(false))
-            if (filter is null || filter(item))
-                await writer.WriteAsync(item, ct).ConfigureAwait(false);
-
-        writer.Complete();
     }
 
     /// <summary>
