@@ -16,7 +16,7 @@ await files.ForEachParallelAsync(async (file, ct) =>
 | Method | Purpose |
 |:--|:--|
 | [`ForEachParallelAsync`](#foreachparallelasync) | Process items concurrently with a global limit |
-| [`ForEachParallelAsync<T,TResult>`](#foreachparallelasyncttresult) | Process items concurrently and collect results |
+| [`ForEachParallelAsync<T,TResult>`](#foreachparallelasync-with-results) | Process items concurrently and collect results |
 | [`ForEachParallelByKeyAsync`](#foreachparallelbykeysync) | Process items with both global and per-key concurrency limits |
 
 **For `Channel<T>` only:**
@@ -74,9 +74,9 @@ foreach (var (url, code) in results)
 - Exception aggregation same as `ForEachParallelAsync` (inherits from `Parallel.ForEachAsync`)
 
 
-### `ForEachParallelByKeyAsync`
+### ForEachParallelByKeyAsync
 
-Limit concurrency globally AND per key (e.g., by user, account, or host).
+Limit concurrency globally AND per key.
 
 ```csharp
 await jobs.ForEachParallelByKeyAsync(
@@ -97,27 +97,28 @@ await jobs.ForEachParallelByKeyAsync(
 - Aggregates exceptions via `Task.WhenAll` - multiple failures collected into an `AggregateException`
 
 
----
+### ForEachAsync
 
-## In-depth: Additional Methods
+Process channel items sequentially.
 
-### Channel Helper Methods
-
-#### ReadAllAsync() - Read items as async stream
 ```csharp
-using ForEach.Channel;
+await channel.ForEachAsync(async (item, ct) =>
+    await ProcessAsync(item, ct));
+```
 
-// Without: verbose channel reader access
-while (await channel.Reader.WaitToReadAsync())
-while (channel.Reader.TryRead(out var item))
-    Process(item);
+### ReadAllAsync
 
-// With: simple foreach
+Convert channel to `IAsyncEnumerable<T>`.
+
+```csharp
 await foreach (var item in channel.ReadAllAsync())
     Process(item);
 ```
 
-#### WriteAllAsync() - Write all items from a source
+### WriteAllAsync
+
+Write items into channel.
+
 ```csharp
 var channel = Channel.CreateUnbounded<int>();
 
@@ -127,18 +128,7 @@ await channel.WriteAllAsync(Enumerable.Range(1, 100));
 // From IAsyncEnumerable<T>
 await channel.WriteAllAsync(FetchDataAsync());
 
-// Note: You must manually complete the channel when done writing
 channel.Writer.Complete();
-```
-
-#### ForEachAsync() - Process items sequentially
-```csharp
-// Process each item one at a time (sequential)
-await channel.ForEachAsync(async (item, ct) =>
-{
-    // Items processed in order, one after another
-    await ProcessAsync(item, ct);
-});
 ```
 
 ---
