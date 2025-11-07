@@ -4,7 +4,7 @@ using FluentAssertions;
 
 namespace FlowControl.Test.EnumerableControl;
 
-public class ParallelAsyncControlTests
+public class ParallelControlAsyncTests
 {
     [Fact]
     public async Task ParallelAsync_ProcessesAllItems_AndHonorsMaxParallel()

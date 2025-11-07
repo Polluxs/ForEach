@@ -6,7 +6,7 @@ namespace FlowControl.EnumerableControl;
 /// <summary>
 /// Parallel helpers for running asynchronous work over <see cref="IEnumerable{T}"/>.
 /// </summary>
-public static class ParallelAsyncControl
+public static class ParallelControlAsync
 {
     /// <summary>
     /// Run asynchronous work for each item with a global concurrency cap.
