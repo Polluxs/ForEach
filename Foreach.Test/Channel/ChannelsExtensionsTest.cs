@@ -198,6 +198,70 @@ public partial class ChannelsExtensionsTest
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
+
+    [Fact]
+    public async Task ForEachBatchParallelAsync_ProcessesBatchesCorrectly()
+    {
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<int>();
+        var processedBatches = new ConcurrentBag<List<int>>();
+        var maxConcurrentBatches = 0;
+        var currentConcurrentBatches = 0;
+
+        // Write items
+        for (int i = 1; i <= 100; i++)
+        {
+            await channel.Writer.WriteAsync(i);
+        }
+        channel.Writer.Complete();
+
+        await channel.ForEachBatchParallelAsync(async (batch, ct) =>
+        {
+            var current = Interlocked.Increment(ref currentConcurrentBatches);
+            InterlockedExtensions.Max(ref maxConcurrentBatches, current);
+
+            processedBatches.Add(batch);
+            await Task.Delay(10, ct);
+
+            Interlocked.Decrement(ref currentConcurrentBatches);
+        }, maxPerBatch: 10, maxConcurrent: 4);
+
+        // Verify all items were processed
+        var allProcessedItems = processedBatches.SelectMany(b => b).OrderBy(x => x).ToList();
+        allProcessedItems.Should().BeEquivalentTo(System.Linq.Enumerable.Range(1, 100));
+
+        // Verify batches are correct size (except possibly the last one)
+        var batchSizes = processedBatches.Select(b => b.Count).OrderByDescending(x => x).ToList();
+        batchSizes.Take(batchSizes.Count - 1).Should().OnlyContain(size => size == 10);
+        batchSizes.Last().Should().BeLessThanOrEqualTo(10);
+
+        // Verify maxConcurrent was respected
+        maxConcurrentBatches.Should().BeLessThanOrEqualTo(4);
+    }
+
+    [Fact]
+    public async Task ForEachBatchParallelAsync_HandlesPartialBatch()
+    {
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<int>();
+        var processedBatches = new ConcurrentBag<List<int>>();
+
+        // Write items
+        for (int i = 1; i <= 25; i++)
+        {
+            await channel.Writer.WriteAsync(i);
+        }
+        channel.Writer.Complete();
+
+        await channel.ForEachBatchParallelAsync(async (batch, ct) =>
+        {
+            processedBatches.Add(batch);
+            await Task.Delay(1, ct);
+        }, maxPerBatch: 10);
+
+        // Should have 3 batches: 10, 10, 5
+        processedBatches.Should().HaveCount(3);
+        var batchSizes = processedBatches.Select(b => b.Count).OrderByDescending(x => x).ToList();
+        batchSizes.Should().ContainInOrder(10, 10, 5);
+    }
 }
 
 internal static class InterlockedExtensions

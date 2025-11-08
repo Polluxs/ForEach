@@ -63,6 +63,21 @@ public static partial class ChannelsExtensions
     }
 
     /// <summary>
+    /// Process items from the channel in batches with parallel batch processing.
+    /// Items are grouped into batches of up to maxPerBatch items, and up to maxConcurrent batches are processed in parallel.
+    /// </summary>
+    public static Task ForEachBatchParallelAsync<T>(
+        this Channel<T> channel,
+        Func<List<T>, CancellationToken, ValueTask> handler,
+        int maxPerBatch,
+        int maxConcurrent = 32,
+        CancellationToken ct = default)
+    {
+        return channel.ReadAllAsync(ct)
+            .ForEachBatchParallelAsync(handler, maxPerBatch, maxConcurrent, ct);
+    }
+
+    /// <summary>
     /// Write all items from an async enumerable source to the channel.
     /// </summary>
     public static async Task WriteAllAsync<T>(

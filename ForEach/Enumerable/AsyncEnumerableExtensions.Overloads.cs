@@ -67,4 +67,25 @@ public static partial class AsyncEnumerableExtensions
         ArgumentNullException.ThrowIfNull(body);
         return source.ForEachKeyParallelAsync(keySelector, (item, _) => body(item), maxConcurrent, maxPerKey, ct);
     }
+
+    /// <summary>
+    /// Process items in batches with parallel batch processing.
+    /// Items are grouped into batches of up to maxPerBatch items, and up to maxConcurrent batches are processed in parallel.
+    /// </summary>
+    /// <typeparam name="T">Item type.</typeparam>
+    /// <param name="source">Items to process.</param>
+    /// <param name="body">The async delegate to run per batch. Receives a list of items in the batch.</param>
+    /// <param name="maxPerBatch">Maximum number of items per batch.</param>
+    /// <param name="maxConcurrent">Maximum number of batches being processed concurrently.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public static Task ForEachBatchParallelAsync<T>(
+        this IEnumerable<T> source,
+        Func<List<T>, ValueTask> body,
+        int maxPerBatch,
+        int maxConcurrent = 32,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+        return source.ForEachBatchParallelAsync((batch, _) => body(batch), maxPerBatch, maxConcurrent, ct);
+    }
 }

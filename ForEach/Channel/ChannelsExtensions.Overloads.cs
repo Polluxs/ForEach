@@ -47,4 +47,19 @@ public static partial class ChannelsExtensions
         ArgumentNullException.ThrowIfNull(handler);
         return channel.ForEachKeyParallelAsync(keySelector, (item, _) => handler(item), maxConcurrent, maxPerKey, ct);
     }
+
+    /// <summary>
+    /// Process items from the channel in batches with parallel batch processing.
+    /// Items are grouped into batches of up to maxPerBatch items, and up to maxConcurrent batches are processed in parallel.
+    /// </summary>
+    public static Task ForEachBatchParallelAsync<T>(
+        this Channel<T> channel,
+        Func<List<T>, ValueTask> handler,
+        int maxPerBatch,
+        int maxConcurrent = 32,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return channel.ForEachBatchParallelAsync((batch, _) => handler(batch), maxPerBatch, maxConcurrent, ct);
+    }
 }

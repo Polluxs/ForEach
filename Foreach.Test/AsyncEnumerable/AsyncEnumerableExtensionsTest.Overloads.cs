@@ -80,4 +80,26 @@ public partial class AsyncEnumerableExtensionsTest
         processed.Should().HaveCount(20);
         processed.Should().BeEquivalentTo(items.Select(i => i.Value));
     }
+
+    /// <summary>
+    /// Test that ForEachBatchParallelAsync overload without CT exists and works.
+    /// Why: Batch processing logic often doesn't need CT in the body - cleaner code.
+    /// </summary>
+    [Fact]
+    public async Task ForEachBatchParallelAsync_WorksWithoutCancellationTokenInBody()
+    {
+        var items = System.Linq.Enumerable.Range(1, 30).ToArray();
+        var asyncItems = ToAsyncEnumerable(items);
+        var processedBatches = new ConcurrentBag<List<int>>();
+
+        // Cleaner syntax - CT not needed in the body for simple batch processing
+        await asyncItems.ForEachBatchParallelAsync(async batch =>
+        {
+            processedBatches.Add(batch);
+            await Task.Delay(1);
+        }, maxPerBatch: 10);
+
+        var allProcessedItems = processedBatches.SelectMany(b => b).OrderBy(x => x).ToList();
+        allProcessedItems.Should().BeEquivalentTo(items);
+    }
 }

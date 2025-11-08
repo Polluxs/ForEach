@@ -48,6 +48,16 @@ await orders.ForEachKeyParallelAsync(
     maxPerKey: 2);
 ```
 
+### Batch processing with parallel execution
+
+```csharp
+// Process items in batches of 50, with max 5 batches running concurrently
+await records.ForEachBatchParallelAsync(async (batch, ct) =>
+{
+    await database.BulkInsertAsync(batch, ct);
+}, maxPerBatch: 50, maxConcurrent: 5);
+```
+
 ---
 
 ## All Methods
@@ -59,6 +69,7 @@ await orders.ForEachKeyParallelAsync(
 | [`ForEachParallelAsync`](#foreachparallelasync) | Process items concurrently with a global limit |
 | [`ForEachParallelAsync<T,TResult>`](#foreachparallelasync-with-results) | Process items concurrently and collect results |
 | [`ForEachKeyParallelAsync`](#foreachkeyparallelasync) | Process items with both global and per-key concurrency limits |
+| [`ForEachBatchParallelAsync`](#foreachbatchparallelasync) | Process items in batches with parallel batch execution |
 
 **For `Channel<T>` only:**
 
@@ -167,6 +178,30 @@ await jobs.ForEachKeyParallelAsync(
 - Uses bounded channel + per-key semaphores for efficient throttling
 - Enumerates source only once (no materialization required)
 - Aggregates exceptions via `Task.WhenAll` - multiple failures collected into an `AggregateException`
+
+
+### ForEachBatchParallelAsync
+
+Process items in batches with concurrent batch execution.
+
+```csharp
+using ForEach.Enumerable; // or ForEach.AsyncEnumerable
+
+// Bulk insert records in batches
+await records.ForEachBatchParallelAsync(async (batch, ct) =>
+{
+    await database.BulkInsertAsync(batch, ct);
+    Console.WriteLine($"Inserted batch of {batch.Count} records");
+}, maxPerBatch: 100, maxConcurrent: 4);
+```
+
+- Items grouped into batches of up to `maxPerBatch` items
+- Up to `maxConcurrent` batches processed in parallel
+- Last batch may contain fewer items
+- Each batch provided as `List<T>` to body function
+- Useful for database bulk operations, API batch calls, or any scenario where processing N items together is more efficient
+- Uses bounded channel + producer-consumer pattern
+- Aggregates exceptions via `Task.WhenAll` → `AggregateException`
 
 
 ### ForEachAsync

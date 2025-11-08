@@ -179,4 +179,72 @@ public static partial class AsyncEnumerableExtensions
             }
         }
     }
+
+    /// <summary>
+    /// Process items in batches with parallel batch processing.
+    /// Items are grouped into batches of up to maxPerBatch items, and up to maxConcurrent batches are processed in parallel.
+    /// </summary>
+    /// <typeparam name="T">Item type.</typeparam>
+    /// <param name="source">Items to process.</param>
+    /// <param name="body">The async delegate to run per batch. Receives a list of items in the batch.</param>
+    /// <param name="maxPerBatch">Maximum number of items per batch.</param>
+    /// <param name="maxConcurrent">Maximum number of batches being processed concurrently.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public static async Task ForEachBatchParallelAsync<T>(
+        this IAsyncEnumerable<T> source,
+        Func<List<T>, CancellationToken, ValueTask> body,
+        int maxPerBatch,
+        int maxConcurrent = 32,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(body);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(maxPerBatch, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(maxConcurrent, 0);
+
+        var batchChannel = System.Threading.Channels.Channel.CreateBounded<List<T>>(maxConcurrent);
+
+        // Producer: read items and create batches
+        var producer = Task.Run(async () =>
+        {
+            try
+            {
+                var currentBatch = new List<T>(maxPerBatch);
+
+                await foreach (var item in source.WithCancellation(ct).ConfigureAwait(false))
+                {
+                    currentBatch.Add(item);
+
+                    if (currentBatch.Count >= maxPerBatch)
+                    {
+                        await batchChannel.Writer.WriteAsync(currentBatch, ct).ConfigureAwait(false);
+                        currentBatch = new List<T>(maxPerBatch);
+                    }
+                }
+
+                // Write any remaining items as the final batch
+                if (currentBatch.Count > 0)
+                {
+                    await batchChannel.Writer.WriteAsync(currentBatch, ct).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                batchChannel.Writer.Complete();
+            }
+        }, ct);
+
+        // Consumers: process batches in parallel
+        var consumers = System.Linq.Enumerable.Range(0, maxConcurrent)
+            .Select(_ => Task.Run(async () =>
+            {
+                await foreach (var batch in batchChannel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
+                {
+                    await body(batch, ct).ConfigureAwait(false);
+                }
+            }, ct))
+            .ToArray();
+
+        await Task.WhenAll(consumers.Append(producer));
+    }
 }

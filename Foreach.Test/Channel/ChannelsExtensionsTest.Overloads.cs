@@ -84,4 +84,29 @@ public partial class ChannelsExtensionsTest
 
         processed.Should().HaveCount(20);
     }
+
+    /// <summary>
+    /// Test that ForEachBatchParallelAsync overload without CT exists and works.
+    /// Why: Batch processing logic often doesn't need CT in the body - cleaner code.
+    /// </summary>
+    [Fact]
+    public async Task ForEachBatchParallelAsync_WorksWithoutCancellationTokenInBody()
+    {
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<int>();
+        var processedBatches = new ConcurrentBag<List<int>>();
+
+        for (int i = 1; i <= 30; i++)
+            await channel.Writer.WriteAsync(i);
+        channel.Writer.Complete();
+
+        // Cleaner syntax - CT not needed in the body for simple batch processing
+        await channel.ForEachBatchParallelAsync(async batch =>
+        {
+            processedBatches.Add(batch);
+            await Task.Delay(1);
+        }, maxPerBatch: 10);
+
+        var allProcessedItems = processedBatches.SelectMany(b => b).OrderBy(x => x).ToList();
+        allProcessedItems.Should().BeEquivalentTo(System.Linq.Enumerable.Range(1, 30));
+    }
 }
