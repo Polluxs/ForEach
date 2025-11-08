@@ -97,7 +97,7 @@ public partial class AsyncEnumerableExtensionsTest
         {
             processedBatches.Add(batch);
             await Task.Delay(1);
-        }, maxConcurrencyPerBatch: 10);
+        }, batchSize: 10);
 
         var allProcessedItems = processedBatches.SelectMany(b => b).OrderBy(x => x).ToList();
         allProcessedItems.Should().BeEquivalentTo(items);

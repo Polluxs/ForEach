@@ -223,7 +223,7 @@ public partial class ChannelsExtensionsTest
             await Task.Delay(10, ct);
 
             Interlocked.Decrement(ref currentConcurrentBatches);
-        }, maxConcurrencyPerBatch: 10, maxConcurrency: 4);
+        }, batchSize: 10, maxConcurrency: 4);
 
         // Verify all items were processed
         var allProcessedItems = processedBatches.SelectMany(b => b).OrderBy(x => x).ToList();
@@ -255,7 +255,7 @@ public partial class ChannelsExtensionsTest
         {
             processedBatches.Add(batch);
             await Task.Delay(1, ct);
-        }, maxConcurrencyPerBatch: 10);
+        }, batchSize: 10);
 
         // Should have 3 batches: 10, 10, 5
         processedBatches.Should().HaveCount(3);

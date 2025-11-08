@@ -7,7 +7,7 @@
 
         <!-- NuGet Package Metadata -->
         <PackageId>Polluxs.ForEach</PackageId>
-        <Version>0.1.0</Version>
+        <Version>0.1.1</Version>
         <Authors>Polluxs</Authors>
         <Description>Extension methods that add parallel ForEach iterations to IEnumerable&lt;T&gt;, IAsyncEnumerable&lt;T&gt;, and Channel&lt;T&gt;. Process items concurrently with configurable limits, collect results, and control per-key concurrency.</Description>
         <PackageTags>parallel;foreach;async;concurrent;channel;enumerable;asyncenumerable;throttling;concurrency</PackageTags>

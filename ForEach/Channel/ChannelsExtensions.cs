@@ -64,17 +64,17 @@ public static partial class ChannelsExtensions
 
     /// <summary>
     /// Process items from the channel in batches with parallel batch processing.
-    /// Items are grouped into batches of up to maxPerBatch items, and up to maxConcurrent batches are processed in parallel.
+    /// Items are grouped into batches of up to batchSize items, and up to maxConcurrency batches are processed in parallel.
     /// </summary>
     public static Task ForEachBatchParallelAsync<T>(
         this Channel<T> channel,
         Func<List<T>, CancellationToken, ValueTask> @delegate,
+        int batchSize,
         int maxConcurrency = 32,
-        int maxConcurrencyPerBatch = 4,
         CancellationToken ct = default)
     {
         return channel.ReadAllAsync(ct)
-            .ForEachBatchParallelAsync(@delegate, maxConcurrency, maxConcurrencyPerBatch, ct);
+            .ForEachBatchParallelAsync(@delegate, batchSize, maxConcurrency, ct);
     }
 
     /// <summary>

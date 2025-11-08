@@ -182,24 +182,24 @@ public static partial class AsyncEnumerableExtensions
 
     /// <summary>
     /// Process items in batches with parallel batch processing.
-    /// Items are grouped into batches of up to maxPerBatch items, and up to maxConcurrent batches are processed in parallel.
+    /// Items are grouped into batches of up to batchSize items, and up to maxConcurrency batches are processed in parallel.
     /// </summary>
     /// <typeparam name="T">Item type.</typeparam>
     /// <param name="source">Items to process.</param>
     /// <param name="delegate">The async delegate to run per batch. Receives a list of items in the batch.</param>
-    /// <param name="maxConcurrencyPerBatch">Maximum number of items per batch.</param>
+    /// <param name="batchSize">Maximum number of items per batch.</param>
     /// <param name="maxConcurrency">Maximum number of batches being processed concurrently.</param>
     /// <param name="ct">Cancellation token.</param>
     public static async Task ForEachBatchParallelAsync<T>(
         this IAsyncEnumerable<T> source,
         Func<List<T>, CancellationToken, ValueTask> @delegate,
+        int batchSize,
         int maxConcurrency = 32,
-        int maxConcurrencyPerBatch = 4,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(@delegate);
-        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(maxConcurrencyPerBatch, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(batchSize, 0);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(maxConcurrency, 0);
 
         var batchChannel = System.Threading.Channels.Channel.CreateBounded<List<T>>(maxConcurrency);
@@ -209,16 +209,16 @@ public static partial class AsyncEnumerableExtensions
         {
             try
             {
-                var currentBatch = new List<T>(maxConcurrencyPerBatch);
+                var currentBatch = new List<T>(batchSize);
 
                 await foreach (var item in source.WithCancellation(ct).ConfigureAwait(false))
                 {
                     currentBatch.Add(item);
 
-                    if (currentBatch.Count >= maxConcurrencyPerBatch)
+                    if (currentBatch.Count >= batchSize)
                     {
                         await batchChannel.Writer.WriteAsync(currentBatch, ct).ConfigureAwait(false);
-                        currentBatch = new List<T>(maxConcurrencyPerBatch);
+                        currentBatch = new List<T>(batchSize);
                     }
                 }
 

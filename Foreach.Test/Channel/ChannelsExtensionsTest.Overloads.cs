@@ -104,7 +104,7 @@ public partial class ChannelsExtensionsTest
         {
             processedBatches.Add(batch);
             await Task.Delay(1);
-        }, maxConcurrencyPerBatch: 10);
+        }, batchSize: 10);
 
         var allProcessedItems = processedBatches.SelectMany(b => b).OrderBy(x => x).ToList();
         allProcessedItems.Should().BeEquivalentTo(System.Linq.Enumerable.Range(1, 30));
