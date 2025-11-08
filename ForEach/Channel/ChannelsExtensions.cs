@@ -3,7 +3,7 @@ using ForEach.AsyncEnumerable;
 
 namespace ForEach.Channel;
 
-public static class ChannelsExtensions
+public static partial class ChannelsExtensions
 {
     /// <summary>
     /// Read all items from the channel as an async enumerable stream.

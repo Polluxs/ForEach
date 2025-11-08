@@ -6,7 +6,7 @@ namespace ForEach.FeEnumerable;
 /// <summary>
 /// Parallel helpers for running asynchronous work over <see cref="IEnumerable{T}"/>.
 /// </summary>
-public static class AsyncEnumerableExtensions
+public static partial class AsyncEnumerableExtensions
 {
     /// <summary>
     /// Run asynchronous work for each item with a global concurrency cap.

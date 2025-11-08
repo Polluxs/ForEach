@@ -4,7 +4,7 @@ using ForEach.AsyncEnumerable;
 
 namespace Foreach.Test.AsyncEnumerable;
 
-public class AsyncEnumerableExtensionsTest
+public partial class AsyncEnumerableExtensionsTest
 {
     private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> source)
     {

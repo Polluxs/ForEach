@@ -4,7 +4,7 @@ using ForEach.FeEnumerable;
 
 namespace Foreach.Test.Enumerable;
 
-public class AsyncEnumerableExtensionsTests
+public partial class AsyncEnumerableExtensionsTests
 {
     [Fact]
     public async Task ForEachParallelAsync_ProcessesAllItems_AndHonorsMaxParallel()

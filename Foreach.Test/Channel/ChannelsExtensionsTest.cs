@@ -4,7 +4,7 @@ using ForEach.Channel;
 
 namespace Foreach.Test.Channel;
 
-public class ChannelsExtensionsTest
+public partial class ChannelsExtensionsTest
 {
     [Fact]
     public async Task ReadAllAsync_ReadsAllItemsFromChannel()
